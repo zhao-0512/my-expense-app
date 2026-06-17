@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的記帳 APP</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { max-width: 450px; width: 100%; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        h2 { margin-top: 0; color: #333; font-size: 20px; border-bottom: 2px solid #eee; padding-bottom: 8px; }
+        input, select { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        button { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #0056b3; }
+        .expense-item { background: #f8f9fa; padding: 12px; margin: 8px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .type-支出 { border-left: 5px solid #dc3545; } /* 支出顯示紅色 */
+        .type-收入 { border-left: 5px solid #28a745; } /* 收入顯示綠色 */
+        .badge { background: #e9ecef; padding: 3px 8px; border-radius: 4px; font-size: 12px; color: #495057; margin-left: 8px; }
+        .msg { color: #28a745; font-weight: bold; margin-top: 5px; text-align: center; }
+        .amount-支出 { color: #dc3545; font-weight: bold; }
+        .amount-收入 { color: #28a745; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="auth-box">
+        <h2>歡迎使用記帳 APP (註冊/登入)</h2>
+        <input type="text" id="username" placeholder="請輸入帳號">
+        <input type="password" id="password" placeholder="請輸入密碼">
+        <button onclick="handleAuth('register')" style="background-color: #6c757d; margin-bottom: 8px;">註冊帳號</button>
+        <button onclick="handleAuth('login')">立即登入</button>
+        <div id="auth-msg" class="msg"></div>
+    </div>
+
+    <div class="container" id="expense-box" style="display: none;">
+        <h2> 哈囉 <span id="user-display"></span>，來記帳吧！</h2>
+        
+        <label>類型：</label>
+        <select id="type">
+            <option value="支出">🛑 支出</option>
+            <option value="收入">🟢 收入</option>
+        </select>
+
+        <label>分類：</label>
+        <select id="category">
+            <option value="伙食">🍔 伙食</option>
+            <option value="交通">🚗 交通</option>
+            <option value="旅遊">✈️ 旅遊</option>
+            <option value="其他">📦 其他</option>
+        </select>
+
+        <label>消費項目/來源：</label>
+        <input type="text" id="item" placeholder="例如：麥當勞、薪水">
+        
+        <label>金額：</label>
+        <input type="number" id="amount" placeholder="例如：150">
+        
+        <button onclick="addExpense()" style="background-color: #28a745; margin-top: 10px;">儲存記錄</button>
+        <div id="expense-msg" class="msg"></div>
+        
+        <h3 style="margin-top: 30px;">歷史記帳明細</h3>
+        <div id="expense-list"></div>
+    </div>
+
+    <script>
+        let currentuser = "";
+
+        async function handleAuth(type) {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if(!username || !password) return alert('請填寫完整！');
+
+            const res = await fetch(`/api/${type}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+            document.getElementById('auth-msg').innerText = data.message;
+
+            if(res.status === 200 && type === 'login') {
+                currentuser = username;
+                document.getElementById('user-display').innerText = username;
+                document.getElementById('auth-box').style.display = 'none';
+                document.getElementById('expense-box').style.display = 'block';
+                getExpenses();
+            }
+        }
+
+        async function addExpense() {
+            const type = document.getElementById('type').value;
+            const category = document.getElementById('category').value;
+            const item = document.getElementById('item').value;
+            const amount = document.getElementById('amount').value;
+            if(!item || !amount) return alert('請填寫完整！');
+
+            const res = await fetch('/api/expenses', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: currentuser, type, category, item, amount })
+            });
+            const data = await res.json();
+            document.getElementById('expense-msg').innerText = data.message;
+            
+            document.getElementById('item').value = '';
+            document.getElementById('amount').value = '';
+            getExpenses();
+        }
+
+        async function getExpenses() {
+            const res = await fetch(`/api/expenses/${currentuser}`);
+            const data = await res.json();
+            const listDiv = document.getElementById('expense-list');
+            listDiv.innerHTML = "";
+            
+            data.forEach(exp => {
+                // 根據 收入/支出 給予不同的符號與顏色
+                const sign = exp.type === '支出' ? '-' : '+';
+                listDiv.innerHTML += `
+                    <div class="expense-item type-${exp.type}">
+                        <div>
+                            <strong>${exp.item}</strong>
+                            <span class="badge">${exp.category}</span>
+                        </div>
+                        <span class="amount-${exp.type}">${sign}$${exp.amount}</span>
+                    </div>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
