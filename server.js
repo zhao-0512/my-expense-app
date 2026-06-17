@@ -37,7 +37,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// 3. 新增記帳 API
+
 app.post('/api/expenses', async (req, res) => {
   try {
     const { username, type, category, item, amount } = req.body;
@@ -49,7 +49,7 @@ app.post('/api/expenses', async (req, res) => {
   }
 });
 
-// 4. 查詢歷史記帳 API
+
 app.get('/api/expenses/:username', async (req, res) => {
   try {
     const expenses = await Expense.find({ username: req.params.username });
