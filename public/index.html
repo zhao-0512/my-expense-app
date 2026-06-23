@@ -7,7 +7,9 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .container { max-width: 450px; width: 100%; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        h2 { margin-top: 0; color: #333; font-size: 20px; border-bottom: 2px solid #eee; padding-bottom: 8px; }
+        /* 讓標題區塊可以用 flex 排列，方便放登出按鈕 */
+        .header-flex { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 8px; margin-bottom: 15px; }
+        h2 { margin-top: 0; color: #333; font-size: 20px; margin-bottom: 0; border: none; padding-bottom: 0;}
         input, select { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
         button { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; }
         button:hover { background-color: #0056b3; }
@@ -18,15 +20,19 @@
         .msg { color: #28a745; font-weight: bold; margin-top: 5px; text-align: center; }
         .amount-支出 { color: #dc3545; font-weight: bold; }
         .amount-收入 { color: #28a745; font-weight: bold; }
-        /* 新增刪除按鈕的樣式 */
         .delete-btn { background-color: #dc3545; padding: 5px 10px; font-size: 12px; width: auto; margin: 0 0 0 10px; border-radius: 4px;}
         .delete-btn:hover { background-color: #c82333; }
+        /* 登出按鈕的專屬樣式 */
+        .logout-btn { background-color: #6c757d; padding: 6px 12px; font-size: 14px; width: auto; border-radius: 6px; }
+        .logout-btn:hover { background-color: #5a6268; }
     </style>
 </head>
 <body>
 
     <div class="container" id="auth-box">
-        <h2>歡迎使用記帳 APP (註冊/登入)</h2>
+        <div class="header-flex">
+            <h2>歡迎使用記帳 APP (註冊/登入)</h2>
+        </div>
         <input type="text" id="username" placeholder="請輸入帳號">
         <input type="password" id="password" placeholder="請輸入密碼">
         <button onclick="handleAuth('register')" style="background-color: #6c757d; margin-bottom: 8px;">註冊帳號</button>
@@ -35,7 +41,10 @@
     </div>
 
     <div class="container" id="expense-box" style="display: none;">
-        <h2> 哈囉 <span id="user-display"></span>，來記帳吧！</h2>
+        <div class="header-flex">
+            <h2> 哈囉 <span id="user-display"></span>！</h2>
+            <button class="logout-btn" onclick="logout()">登出</button>
+        </div>
         
         <label>類型：</label>
         <select id="type">
@@ -85,8 +94,30 @@
                 document.getElementById('user-display').innerText = username;
                 document.getElementById('auth-box').style.display = 'none';
                 document.getElementById('expense-box').style.display = 'block';
+                // 登入成功後，清空登入畫面的輸入框
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
                 getExpenses();
             }
+        }
+
+        // 💡 這是全新增加的：負責登出的函數
+        function logout() {
+            if (!confirm('確定要登出嗎？')) return;
+
+            // 1. 清空當前使用者變數
+            currentuser = "";
+            
+            // 2. 切換畫面：隱藏記帳畫面，顯示登入畫面
+            document.getElementById('expense-box').style.display = 'none';
+            document.getElementById('auth-box').style.display = 'block';
+            
+            // 3. 清空畫面上殘留的訊息跟資料，避免下一個人看到
+            document.getElementById('auth-msg').innerText = '';
+            document.getElementById('expense-msg').innerText = '';
+            document.getElementById('expense-list').innerHTML = '';
+            document.getElementById('item').value = '';
+            document.getElementById('amount').value = '';
         }
 
         async function addExpense() {
@@ -110,6 +141,8 @@
         }
 
         async function getExpenses() {
+            if (!currentuser) return; // 防呆：如果沒有使用者就不抓資料
+
             const res = await fetch(`/api/expenses/${currentuser}`);
             const data = await res.json();
             const listDiv = document.getElementById('expense-list');
@@ -117,41 +150,8 @@
             
             data.forEach(exp => {
                 const sign = exp.type === '支出' ? '-' : '+';
-                // 💡 在這裡：我們把資料庫專屬的 _id 綁到按鈕上
                 listDiv.innerHTML += `
                     <div class="expense-item type-${exp.type}">
                         <div>
                             <strong>${exp.item}</strong>
-                            <span class="badge">${exp.category}</span>
-                        </div>
-                        <div style="display: flex; align-items: center;">
-                            <span class="amount-${exp.type}">${sign}$${exp.amount}</span>
-                            <button class="delete-btn" onclick="deleteExpense('${exp._id}')">刪除</button>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        // 💡 這是全新增加的：負責呼叫後端刪除 API 的函數
-        async function deleteExpense(expenseId) {
-            if (!confirm('確定要刪除這筆紀錄嗎？')) return;
-
-            try {
-                const res = await fetch(`/api/expenses/${expenseId}`, {
-                    method: 'DELETE'
-                });
-                
-                if (res.ok) {
-                    alert('刪除成功！');
-                    getExpenses(); // 刪除成功後，自動重新抓取資料更新畫面
-                } else {
-                    alert('刪除失敗，請稍後再試');
-                }
-            } catch (error) {
-                console.error('刪除錯誤:', error);
-            }
-        }
-    </script>
-</body>
-</html>
+                            <span
