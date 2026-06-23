@@ -11,7 +11,7 @@ app.use(express.static('public'));
 
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ MongoDB 連線成功！'))
-  .catch(err => console.error('❌ 連線失敗:', err));
+  .catch(err => console.error('❌ 連線失敗：', err));
 
 app.post('/api/register', async (req, res) => {
   try {
@@ -37,7 +37,6 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-
 app.post('/api/expenses', async (req, res) => {
   try {
     const { username, type, category, item, amount } = req.body;
@@ -49,7 +48,6 @@ app.post('/api/expenses', async (req, res) => {
   }
 });
 
-
 app.get('/api/expenses/:username', async (req, res) => {
   try {
     const expenses = await Expense.find({ username: req.params.username });
@@ -59,5 +57,17 @@ app.get('/api/expenses/:username', async (req, res) => {
   }
 });
 
+// === 新增：作業要求的 /api/accounts 安全攔截 ===
+app.get('/api/accounts', (req, res) => {
+    res.status(401);
+    return res.send(`
+        <script>
+            alert("未登入安全攔截：請先登入帳號！");
+            window.location.href = "/";
+        </script>
+    `);
+});
+// ===========================================
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`伺服器運作中：http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`伺服器運作中 : http://localhost:${PORT}`));
