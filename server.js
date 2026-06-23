@@ -57,7 +57,23 @@ app.get('/api/expenses/:username', async (req, res) => {
   }
 });
 
-// === 新增：作業要求的 /api/accounts 安全攔截 ===
+// ==========================================
+// 👇 新增：刪除單筆記帳紀錄的 API 👇
+app.delete('/api/expenses/:id', async (req, res) => {
+  try {
+    const deletedExpense = await Expense.findByIdAndDelete(req.params.id);
+    if (!deletedExpense) {
+      return res.status(404).json({ message: '找不到該筆紀錄' });
+    }
+    res.status(200).json({ message: '✅ 刪除成功！' });
+  } catch (err) {
+    res.status(500).json({ message: '刪除失敗', error: err.message });
+  }
+});
+// 👆 結束 👆
+// ==========================================
+
+// === 作業要求的 /api/accounts 安全攔截 ===
 app.get('/api/accounts', (req, res) => {
     res.status(401);
     return res.send(`
@@ -67,7 +83,6 @@ app.get('/api/accounts', (req, res) => {
         </script>
     `);
 });
-// ===========================================
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`伺服器運作中 : http://localhost:${PORT}`));
