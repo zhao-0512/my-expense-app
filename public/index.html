@@ -18,9 +18,14 @@
         .msg { color: #28a745; font-weight: bold; margin-top: 5px; text-align: center; }
         .amount-支出 { color: #dc3545; font-weight: bold; }
         .amount-收入 { color: #28a745; font-weight: bold; }
-        /* 新增刪除按鈕的樣式 */
+        
+        /* 刪除按鈕樣式 */
         .delete-btn { background-color: #dc3545; padding: 5px 10px; font-size: 12px; width: auto; margin: 0 0 0 10px; border-radius: 4px;}
         .delete-btn:hover { background-color: #c82333; }
+        
+        /* 登出按鈕樣式 */
+        .logout-btn { background-color: #6c757d; width: auto; padding: 4px 10px; font-size: 12px; float: right; margin-top: 2px; }
+        .logout-btn:hover { background-color: #5a6268; }
     </style>
 </head>
 <body>
@@ -35,7 +40,7 @@
     </div>
 
     <div class="container" id="expense-box" style="display: none;">
-        <h2> 哈囉 <span id="user-display"></span>，來記帳吧！</h2>
+        <h2> 哈囉 <span id="user-display"></span>，來記帳吧！ <button class="logout-btn" onclick="logout()">登出</button></h2>
         
         <label>類型：</label>
         <select id="type">
@@ -49,7 +54,7 @@
             <option value="交通">🚗 交通</option>
             <option value="旅遊">✈️ 旅遊</option>
             <option value="其他">📦 其他</option>
-        </select>
+        </</select>
 
         <label>消費項目/來源：</label>
         <input type="text" id="item" placeholder="例如：麥當勞、薪水">
@@ -117,7 +122,6 @@
             
             data.forEach(exp => {
                 const sign = exp.type === '支出' ? '-' : '+';
-                // 💡 在這裡：我們把資料庫專屬的 _id 綁到按鈕上
                 listDiv.innerHTML += `
                     <div class="expense-item type-${exp.type}">
                         <div>
@@ -133,7 +137,6 @@
             });
         }
 
-        // 💡 這是全新增加的：負責呼叫後端刪除 API 的函數
         async function deleteExpense(expenseId) {
             if (!confirm('確定要刪除這筆紀錄嗎？')) return;
 
@@ -144,13 +147,37 @@
                 
                 if (res.ok) {
                     alert('刪除成功！');
-                    getExpenses(); // 刪除成功後，自動重新抓取資料更新畫面
+                    getExpenses();
                 } else {
                     alert('刪除失敗，請稍後再試');
                 }
             } catch (error) {
                 console.error('刪除錯誤:', error);
             }
+        }
+
+        // 💡 這是新增加的：登出處理函數
+        function logout() {
+            if (!confirm('確定要登出帳號嗎？')) return;
+
+            // 1. 清除前端登入狀態
+            currentuser = "";
+            document.getElementById('user-display').innerText = "";
+            
+            // 2. 清空畫面上的歷史明細與提示訊息（防洩漏）
+            document.getElementById('expense-list').innerHTML = "";
+            document.getElementById('expense-msg').innerText = "";
+            document.getElementById('auth-msg').innerText = "";
+            
+            // 3. 清空登入輸入框
+            document.getElementById('username').value = "";
+            document.getElementById('password').value = "";
+
+            // 4. 切換畫面：隱藏記帳區，顯示登入區
+            document.getElementById('expense-box').style.display = 'none';
+            document.getElementById('auth-box').style.display = 'block';
+
+            alert('已成功登出！');
         }
     </script>
 </body>
