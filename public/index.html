@@ -18,6 +18,9 @@
         .msg { color: #28a745; font-weight: bold; margin-top: 5px; text-align: center; }
         .amount-支出 { color: #dc3545; font-weight: bold; }
         .amount-收入 { color: #28a745; font-weight: bold; }
+        /* 新增刪除按鈕的樣式 */
+        .delete-btn { background-color: #dc3545; padding: 5px 10px; font-size: 12px; width: auto; margin: 0 0 0 10px; border-radius: 4px;}
+        .delete-btn:hover { background-color: #c82333; }
     </style>
 </head>
 <body>
@@ -113,18 +116,41 @@
             listDiv.innerHTML = "";
             
             data.forEach(exp => {
-                // 根據 收入/支出 給予不同的符號與顏色
                 const sign = exp.type === '支出' ? '-' : '+';
+                // 💡 在這裡：我們把資料庫專屬的 _id 綁到按鈕上
                 listDiv.innerHTML += `
                     <div class="expense-item type-${exp.type}">
                         <div>
                             <strong>${exp.item}</strong>
                             <span class="badge">${exp.category}</span>
                         </div>
-                        <span class="amount-${exp.type}">${sign}$${exp.amount}</span>
+                        <div style="display: flex; align-items: center;">
+                            <span class="amount-${exp.type}">${sign}$${exp.amount}</span>
+                            <button class="delete-btn" onclick="deleteExpense('${exp._id}')">刪除</button>
+                        </div>
                     </div>
                 `;
             });
+        }
+
+        // 💡 這是全新增加的：負責呼叫後端刪除 API 的函數
+        async function deleteExpense(expenseId) {
+            if (!confirm('確定要刪除這筆紀錄嗎？')) return;
+
+            try {
+                const res = await fetch(`/api/expenses/${expenseId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (res.ok) {
+                    alert('刪除成功！');
+                    getExpenses(); // 刪除成功後，自動重新抓取資料更新畫面
+                } else {
+                    alert('刪除失敗，請稍後再試');
+                }
+            } catch (error) {
+                console.error('刪除錯誤:', error);
+            }
         }
     </script>
 </body>
